@@ -3,7 +3,7 @@
     "description": "2D bin packing for PHP",
     "type": "library",
     "require": {
-        "php": "^7.2"
+        "php": "^7.2 || ^8.0"
     },
     "require-dev": {
         "phpunit/phpunit": "^8.1",
