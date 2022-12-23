@@ -144,7 +144,7 @@ class BinPacker
     private function sort($blocks)
     {
         usort($blocks, function (Block $a, Block $b) {
-            return $a->getHeight() < $b->getHeight() -1 : ($a->getHeight() === $b->getHeight() ? 0 : 1);
+            return $a->getHeight() < $b->getHeight() ? -1 : ($a->getHeight() === $b->getHeight() ? 0 : 1);
         });
 
         return $blocks;
