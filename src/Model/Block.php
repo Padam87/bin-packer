@@ -2,93 +2,62 @@
 
 namespace Padam87\BinPacker\Model;
 
+use Padam87\BinPacker\Enum\Orientation;
+
 class Block
 {
-    /**
-     * @var int|float|string
-     */
-    private $height;
+    private ?Node $node = null;
 
-    /**
-     * @var int|float|string
-     */
-    private $width;
-
-    /**
-     * @var bool
-     */
-    private $rotatable;
-
-    /**
-     * An ID or name to identify the block for your own purposes.
-     *
-     * @var mixed|null
-     */
-    private $id;
-
-    /**
-     * @var Node
-     */
-    private $node;
-
-    public function __construct($width, $height, bool $rotatable = true, $id = null)
-    {
-        $this->setWidth($width);
-        $this->setHeight($height);
-        $this->setRotatable($rotatable);
-        $this->id = $id;
+    public function __construct(
+        private int|float $width,
+        private int|float $height,
+        private bool $rotatable = true,
+        private mixed $id = null
+    ) {
     }
 
-    public function getHeight()
-    {
-        return $this->height;
-    }
-
-    public function setHeight($height): self
-    {
-        if (!is_numeric($height)) {
-            throw new \InvalidArgumentException(sprintf('Block height must be numeric, "%s" given', $height));
-        }
-
-        $this->height = $height;
-
-        return $this;
-    }
-
-    public function getWidth()
+    public function getWidth(): int|float
     {
         return $this->width;
     }
 
-    public function setWidth($width): self
+    public function setWidth(int|float $width): self
     {
-        if (!is_numeric($width)) {
-            throw new \InvalidArgumentException(sprintf('Block width must be numeric, "%s" given', $width));
-        }
-
         $this->width = $width;
 
         return $this;
     }
 
-    public function isRotatable(): ?bool
+    public function getHeight(): int|float
+    {
+        return $this->height;
+    }
+
+    public function setHeight(int|float $height): self
+    {
+        $this->height = $height;
+
+        return $this;
+    }
+
+    public function isRotatable(): bool
     {
         return $this->rotatable;
     }
 
-    public function setRotatable(?bool $rotatable): self
+    public function setRotatable(bool $rotatable): self
     {
         $this->rotatable = $rotatable;
 
         return $this;
     }
 
-    public function getId()
+    public function getId(): mixed
     {
         return $this->id;
     }
 
-    public function setId($id): self
+    public function setId(mixed $id): self
     {
         $this->id = $id;
 
@@ -109,6 +78,11 @@ class Block
         return $this;
     }
 
+    public function getRotatedClone(): Block
+    {
+        return new Block($this->getHeight(), $this->getWidth(), $this->isRotatable(), $this->getId());
+    }
+
     public function getNode(): ?Node
     {
         return $this->node;
@@ -119,5 +93,10 @@ class Block
         $this->node = $node;
 
         return $this;
+    }
+
+    public function getOrientation(): Orientation
+    {
+        return $this->getWidth() > $this->getHeight() ? Orientation::Landscape : Orientation::Portrait;
     }
 }

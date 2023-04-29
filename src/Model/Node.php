@@ -2,89 +2,63 @@
 
 namespace Padam87\BinPacker\Model;
 
+use Padam87\BinPacker\Enum\Orientation;
+
 class Node
 {
-    /**
-     * @var int|float|string
-     */
-    private $x;
+    private ?Block $block = null;
 
-    /**
-     * @var int|float|string
-     */
-    private $y;
-
-    /**
-     * @var int|float|string
-     */
-    private $width;
-
-    /**
-     * @var int|float|string
-     */
-    private $height;
-
-    /**
-     * @var bool
-     */
-    private $used;
-
-    /**
-     * @var Node|null
-     */
-    private $right;
-
-    /**
-     * @var Node|null
-     */
-    private $down;
-
-    public function __construct($x, $y, $width, $height, bool $used = false, ?Node $right = null, ?Node $down = null)
-    {
-        foreach (['x' => $x, 'y' => $y, 'width' => $width, 'height' => $height] as $key => $value) {
-            if (!is_numeric($value)) {
-                throw new \InvalidArgumentException(sprintf('Block %s must be numeric, "%s" given', $key, $value));
-            }
-        }
-
-        $this->x = $x;
-        $this->y = $y;
-        $this->width = $width;
-        $this->height = $height;
-
-        $this->used = $used;
-        $this->right = $right;
-        $this->down = $down;
+    public function __construct(
+        private int|float $x,
+        private int|float $y,
+        private int|float $width,
+        private int|float $height,
+        private bool $used = false
+    ) {
     }
 
-    public function getX()
+    public function getX(): int|float
     {
         return $this->x;
     }
 
-    public function getY()
+    public function setX(int|float $x): self
+    {
+        $this->x = $x;
+
+        return $this;
+    }
+
+    public function getY(): int|float
     {
         return $this->y;
     }
 
-    public function getWidth()
+    public function setY(int|float $y): self
+    {
+        $this->y = $y;
+
+        return $this;
+    }
+
+    public function getWidth(): int|float
     {
         return $this->width;
     }
 
-    public function setWidth($width)
+    public function setWidth(int|float $width): self
     {
         $this->width = $width;
 
         return $this;
     }
 
-    public function getHeight()
+    public function getHeight(): int|float
     {
         return $this->height;
     }
 
-    public function setHeight($height)
+    public function setHeight(int|float $height): self
     {
         $this->height = $height;
 
@@ -103,27 +77,30 @@ class Node
         return $this;
     }
 
-    public function getRight(): ?Node
+    public function getBlock(): ?Block
     {
-        return $this->right;
-    }
-    
-    public function setRight(?Node $right): self
-    {
-        $this->right = $right;
-        
-        return $this;
+        return $this->block;
     }
 
-    public function getDown(): ?Node
+    public function setBlock(?Block $block): self
     {
-        return $this->down;
-    }
-
-    public function setDown(?Node $down): self
-    {
-        $this->down = $down;
+        $this->block = $block;
 
         return $this;
+    }
+
+    public function canContain(Block $block): bool
+    {
+        return $this->getHeight() >= $block->getHeight() && $this->getWidth() >= $block->getWidth();
+    }
+
+    public function getOrientation(): Orientation
+    {
+        return $this->getWidth() > $this->getHeight() ? Orientation::Landscape : Orientation::Portrait;
+    }
+
+    public function isValid(): bool
+    {
+        return $this->getHeight() > 0 && $this->getWidth() > 0;
     }
 }

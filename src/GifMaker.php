@@ -4,27 +4,22 @@ namespace Padam87\BinPacker;
 
 use Padam87\BinPacker\Model\Bin;
 use Padam87\BinPacker\Model\Block;
+use Padam87\BinPacker\Model\Node;
 
 class GifMaker
 {
-    private $visualizer;
-
     /**
-     * @var \Imagick[]
+     * @var \GdImage[]
      */
-    private $images = [];
+    private array $images = [];
 
-    public function __construct(Visualizer $visualizer)
+    public function __construct(private Visualizer $visualizer)
     {
-        $this->visualizer = $visualizer;
     }
 
-    public function __invoke(Bin $bin, array $blocks, Block $currentBlock)
+    public function __invoke(Bin $bin, State $state, ?Node $node, Block $block)
     {
-        $visualizer = new Visualizer();
-        $image = $visualizer->visualize($bin, $blocks);
-
-        $this->images[] = $image;
+        $this->images[] = $this->visualizer->visualize($bin, $state);
     }
 
     public function reset()
@@ -42,11 +37,16 @@ class GifMaker
         $gif = new \Imagick();
         $gif->setFormat("gif");
 
-        $last = $this->images[count($this->images) - 1];
+        foreach ($this->images as $gdImage) {
+            ob_start();
+            imagegif($gdImage);
+            $content = ob_get_contents();
+            ob_end_clean();
 
-        foreach ($this->images as $image) {
+            $image = new \Imagick();
+            $image->readImageBlob($content);
+
             $image->setImageDelay($delay);
-            $image->setImageExtent($last->getImageWidth(), $last->getImageHeight());
 
             $gif->addImage($image);
         }

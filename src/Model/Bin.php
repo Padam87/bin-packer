@@ -2,66 +2,42 @@
 
 namespace Padam87\BinPacker\Model;
 
+use Padam87\BinPacker\Enum\Orientation;
+
 class Bin
 {
-    /**
-     * @var int|float|string
-     */
-    private $height;
+    private ?Node $node = null;
 
-    /**
-     * @var int|float|string
-     */
-    private $width;
-
-    /**
-     * @var bool
-     */
-    private $growthAllowed;
-
-    /**
-     * @var Node
-     */
-    private $node;
-
-    public function __construct($width, $height, bool $growthAllowed = false)
-    {
-        if (!is_numeric($width)) {
-            throw new \InvalidArgumentException(sprintf('Bin width must be numeric, "%s" given', $width));
-        }
-
-        if (!is_numeric($height)) {
-            throw new \InvalidArgumentException(sprintf('Bin height must be numeric, "%s" given', $height));
-        }
-
-        $this->width = $width;
-        $this->height = $height;
-        $this->growthAllowed = $growthAllowed;
+    public function __construct(
+        private int|float $width,
+        private int|float $height,
+        private bool $growthAllowed = false
+    ) {
     }
 
-    public function getHeight()
-    {
-        return $this->height;
-    }
-
-    public function setHeight($height)
-    {
-        $this->height = $height;
-
-        return $this;
-    }
-
-    public function getWidth()
+    public function getWidth(): int|float
     {
         return $this->width;
     }
 
-    public function setWidth($width)
+    public function setWidth(int|float $width): self
     {
         $this->width = $width;
 
         return $this;
     }
+
+    public function getHeight(): int|float
+    {
+        return $this->height;
+    }
+
+    public function setHeight(int|float $height): self
+    {
+        $this->height = $height;
+
+        return $this;
+    }    
 
     public function isGrowthAllowed(): bool
     {
@@ -78,5 +54,10 @@ class Bin
         $this->node = $node;
 
         return $this;
+    }
+
+    public function getOrientation(): Orientation
+    {
+        return $this->getWidth() > $this->getHeight() ? Orientation::Landscape : Orientation::Portrait;
     }
 }

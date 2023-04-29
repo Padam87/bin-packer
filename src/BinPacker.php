@@ -2,151 +2,114 @@
 
 namespace Padam87\BinPacker;
 
+use Padam87\BinPacker\Enum\SplitDirection;
+use Padam87\BinPacker\FitHeuristic\FitHeuristic;
 use Padam87\BinPacker\Model\Bin;
 use Padam87\BinPacker\Model\Block;
 use Padam87\BinPacker\Model\Node;
+use Padam87\BinPacker\SplitHeuristic\SplitHeuristic;
 
 class BinPacker
 {
-    /**
-     * @param Bin $bin
-     * @param Block[] $blocks
-     * @param callable|null $stepCallback
-     *
-     * @return Block[]
-     */
-    public function pack(Bin $bin, array $blocks, ?callable $stepCallback = null): array
+    public function __construct(private FitHeuristic $fitHeuristic, private SplitHeuristic $splitHeuristic)
     {
-        $blocks = $this->sort($blocks);
+    }
 
+    public function pack(Bin $bin, array $blocks, ?callable $stepCallback = null, ?State $state = null): State
+    {
         $root = new Node(0, 0, $bin->getWidth(), $bin->getHeight());
+
+        if ($state === null) {
+            $state = new State($root);
+        }
 
         $bin->setNode($root);
 
         /** @var Block $block */
         foreach ($blocks as $block) {
-            $node = $this->findNodeWithRotation($root, $block);
-
-            if ($node === null && $bin->isGrowthAllowed()) {
-                $this->grow($bin, $block->getWidth(), $block->getHeight());
-
-                $node = $this->findNodeWithRotation($root, $block);
+            if ($block->getNode()) {
+                continue;
             }
 
+            $node = $this->findBestNodeForBlock($state, $block);
+
             if ($node !== null) {
-                $block->setNode($this->splitNode($node, $block->getWidth(), $block->getHeight()));
+                $this->splitNode($state, $node, $block);
+
+                $block->setNode($node);
             }
 
             if ($stepCallback) {
-                $stepCallback($bin, $blocks, $block);
+                $stepCallback($bin, $state, $node, $block);
             }
         }
 
-        return $blocks;
+        return $state;
     }
 
-    private function findNodeWithRotation(Node $root, Block $block)
+    private function findBestNodeForBlock(State $state, Block $block): ?Node
     {
-        if (null === $node = $this->findNode($root, $block->getWidth(), $block->getHeight())) {
-            if ($block->isRotatable()) {
-                $block->rotate();
+        $rotated = $block->getRotatedClone();
 
-                if (null === $node = $this->findNode($root, $block->getWidth(), $block->getHeight())) {
-                    $block->rotate(); // if it still won't fit, rotate it back -> prefer original if growth is enabled
+        $bestNode = null;
+        $bestScore = PHP_INT_MAX;
+        $shouldRotate = false;
+
+        foreach ($state->getFreeNodes() as $freeNode) {
+
+            if ($freeNode->canContain($block)) {
+                $score = ($this->fitHeuristic)($freeNode, $block);
+
+                if ($score < $bestScore) {
+                    $bestNode = $freeNode;
+                    $bestScore = $score;
+                    $shouldRotate = false;
+                }
+            }
+
+            if ($block->isRotatable() && $freeNode->canContain($rotated)) {
+                $score = ($this->fitHeuristic)($freeNode, $rotated);
+
+                if ($score < $bestScore) {
+                    $bestNode = $freeNode;
+                    $bestScore = $score;
+                    $shouldRotate = true;
                 }
             }
         }
 
-        return $node;
-    }
-
-    private function findNode(Node $node, $w, $h): ?Node
-    {
-        if ($node->isUsed()) {
-            return $this->findNode($node->getRight(), $w, $h) ?: $this->findNode($node->getDown(), $w, $h);
-        } elseif ($w <= $node->getWidth() && $h <= $node->getHeight()) {
-            return $node;
+        if ($shouldRotate) {
+            $block->rotate();
         }
 
-        return null;
+        return $bestNode;
     }
 
-    private function splitNode(Node $node, $w, $h)
-    {
+    private function splitNode(State $state, Node $node, Block $block)
+    {   $w = $block->getWidth();
+        $h = $block->getHeight();
+
+        $direction = ($this->splitHeuristic)($node, $block);
+
+        if ($direction === SplitDirection::Horizontal) {
+            $down = new Node($node->getX(), $node->getY() + $h, $node->getWidth(), $node->getHeight() - $h);
+            $right = new Node($node->getX() + $w, $node->getY(), $node->getWidth() - $w, $h);
+        } elseif ($direction === SplitDirection::Vertical) {
+            $down = new Node($node->getX(), $node->getY() + $h, $w, $node->getHeight() - $h);
+            $right = new Node($node->getX() + $w, $node->getY(), $node->getWidth() - $w, $node->getHeight());
+        }
+
         $node->setUsed(true);
-        $node->setDown(new Node($node->getX(), $node->getY() + $h, $node->getWidth(), $node->getHeight() - $h));
-        $node->setRight(new Node($node->getX() + $w, $node->getY(), $node->getWidth() - $w, $h));
         $node->setWidth($w);
         $node->setHeight($h);
+        $node->setBlock($block);
 
-        return $node;
-    }
-
-    private function grow(Bin $bin, $w, $h)
-    {
-        $canGrowRight = false;
-        $this->canGrowRight($bin->getNode(), $w, $h, $canGrowRight);
-
-        $shouldGrowRight = !($bin->getWidth() >= $bin->getHeight() + $h);
-
-        if ($canGrowRight && $shouldGrowRight) {
-            $bin->setWidth($bin->getWidth() + $w);
-
-            $this->growRight($bin->getNode(), $w, $h);
-        } else {
-            $bin->setHeight($bin->getHeight() + $h);
-
-            $this->growDown($bin->getNode(), $w, $h);
-        }
-    }
-
-    public function canGrowRight(Node $node, $w, $h, &$can)
-    {
-        if (!$node->isUsed() && $node->getRight() === null) {
-            if ($node->getHeight() >= $h) {
-                $can = true;
-            }
+        if ($right->isValid()) {
+            $state->addNode($right);
         }
 
-        if ($node->getRight()) {
-            $this->canGrowRight($node->getRight(), $w, $h, $can);
+        if ($down->isValid()) {
+            $state->addNode($down);
         }
-
-        if ($node->getDown()) {
-            $this->canGrowRight($node->getDown(), $w, $h, $can);
-        }
-    }
-
-    public function growRight(Node $node, $w, $h)
-    {
-        if (!$node->isUsed() && $node->getRight() === null) {
-            $node->setWidth($node->getWidth() + $w);
-        }
-
-        if ($node->getRight()) {
-            $this->growRight($node->getRight(), $w, $h);
-        }
-
-        if ($node->getDown()) {
-            $this->growRight($node->getDown(), $w, $h);
-        }
-    }
-
-    public function growDown(Node $node, $w, $h)
-    {
-        if ($node->getDown()) {
-            $this->growDown($node->getDown(), $w, $h);
-        } else {
-            $node->setHeight($node->getHeight() + $h);
-        }
-    }
-
-    private function sort($blocks)
-    {
-        usort($blocks, function (Block $a, Block $b) {
-            return $a->getHeight() < $b->getHeight() ;
-        });
-
-        return $blocks;
     }
 }

@@ -3,8 +3,10 @@
 namespace Padam87\BinPacker\Tests;
 
 use Padam87\BinPacker\BinPacker;
+use Padam87\BinPacker\FitHeuristic\BestAreaFit;
 use Padam87\BinPacker\Model\Bin;
 use Padam87\BinPacker\Model\Block;
+use Padam87\BinPacker\SplitHeuristic\MaximizeAreaSplit;
 use Padam87\BinPacker\Visualizer;
 use PHPUnit\Framework\TestCase;
 
@@ -25,16 +27,12 @@ class VisualizerTest extends TestCase
             }
         }
 
-        $packer = new BinPacker();
-
-        $blocks = $packer->pack($bin, $blocks);
+        $packer = new BinPacker(new BestAreaFit(), new MaximizeAreaSplit());
+        $state = $packer->pack($bin, $blocks);
 
         $visualizer = new Visualizer();
-        $image = $visualizer->visualize($bin, $blocks);
+        $image = $visualizer->visualize($bin, $state);
 
-        //$image->setFormat('jpg');
-        //$image->writeImage('bin.jpg');
-
-        $this->assertInstanceOf(\Imagick::class, $image);
+        $this->assertInstanceOf(\GdImage::class, $image);
     }
 }

@@ -3,62 +3,65 @@
 namespace Padam87\BinPacker;
 
 use Padam87\BinPacker\Model\Bin;
-use Padam87\BinPacker\Model\Block;
 use Padam87\BinPacker\Model\Node;
 
 class Visualizer
 {
-    public function visualize(Bin $bin, array $blocks)
+    const MARGIN = 50;
+    const FONT_SIZE = 12;
+    const LINE_HEIGHT = 20;
+    const FONT_PATH = __DIR__ . '/Resources/Roboto-Light.ttf';
+
+    public function __construct()
     {
-        $image = new \Imagick();
-        $image->newImage($bin->getWidth(), $bin->getHeight(), new \ImagickPixel('white'));
+        if (!extension_loaded('gd')) {
+            throw new \LogicException('The "gd" extension is required to use the visualizer');
+        }
+    }
 
-        $draw = new \ImagickDraw();
+    public function visualize(Bin $bin, State $state, ?string $name = null): \GdImage
+    {
+        $image = imagecreatetruecolor($bin->getWidth() + self::MARGIN * 2, $bin->getHeight() + self::MARGIN * 2);
+        imageantialias($image, true);
 
-        $draw->setFillColor(new \ImagickPixel('whitesmoke'));
-        $draw->setStrokeColor(new \ImagickPixel('black'));
+        $black = imagecolorallocate($image, 0, 0, 0);
+        $white = imagecolorallocate($image, 255, 255, 255);
 
-        $this->markFreeSpace($draw, $bin->getNode());
+        imagefilledrectangle(
+            $image,
+            0,
+            0,
+            $bin->getWidth() + self::MARGIN * 2,
+            $bin->getHeight() + self::MARGIN * 2,
+            $white
+        );
 
-        $draw->setFillColor(new \ImagickPixel('white'));
-
-        /** @var Block $block */
-        foreach ($blocks as $block) {
-            $node = $block->getNode();
-
-            if ($node == null || !$node->isUsed()) {
-                continue;
-            }
-
-            $draw->rectangle($node->getX(), $node->getY(), $node->getX() + $block->getWidth(), $node->getY() + $block->getHeight());
-            $draw->annotation($node->getX() + 10, $node->getY() + 20, $block->getId());
-            $draw->annotation($node->getX() + 10, $node->getY() + 40, sprintf('%s x %s', $block->getWidth(), $block->getHeight()));
+        if ($name) {
+            imagettftext($image, self::FONT_SIZE, 0, 25, 25, $black, self::FONT_PATH, $name);
         }
 
-        $image->drawImage($draw);
+        foreach ($state->getNodes() as $node) {
+            $this->drawNode($image, $node);
+        }
 
         return $image;
     }
 
-    public function markFreeSpace(\ImagickDraw $draw, Node $node)
+    private function drawNode(\GdImage $image, Node $node)
     {
-        if (!$node->isUsed()) {
-            $draw->rectangle(
-                $node->getX(),
-                $node->getY(),
-                $node->getX() + $node->getWidth(),
-                $node->getY() + $node->getHeight()
-            );
-            $draw->annotation($node->getX() + 10, $node->getY() + 20, 'free');
-            $draw->annotation($node->getX() + 10, $node->getY() + 40, sprintf('%s x %s', $node->getWidth(), $node->getHeight()));
-        }
+        $x = $node->getX() + self::MARGIN;
+        $y = $node->getY() + self::MARGIN;
 
-        if ($node->getRight()) {
-            $this->markFreeSpace($draw, $node->getRight());
-        }
+        $black = imagecolorallocate($image, 0, 0, 0);
+        $white = imagecolorallocate($image, 255, 255, 255);
+        $whitesmoke = imagecolorallocate($image, 245, 245, 245);
 
-        if ($node->getDown()) {
-            $this->markFreeSpace($draw, $node->getDown());
-        }
+        imagefilledrectangle($image, $x, $y, $x + $node->getWidth(), $y + $node->getHeight(), $node->isUsed() ? $white : $whitesmoke);
+        imagerectangle($image, $x, $y, $x + $node->getWidth(), $y + $node->getHeight(), $black);
+
+        $name = $node->getBlock() ? $node->getBlock()->getId() ?? '-' : 'free';
+
+        imagettftext($image, self::FONT_SIZE, 0, $x + 10, $y + self::LINE_HEIGHT, $black, self::FONT_PATH, $name);
+        imagettftext($image, self::FONT_SIZE, 0, $x + 10, $y + self::LINE_HEIGHT * 2, $black, self::FONT_PATH, sprintf('%s x %s', $node->getWidth(), $node->getHeight()));
     }
 }
