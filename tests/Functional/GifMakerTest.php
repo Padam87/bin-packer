@@ -3,9 +3,11 @@
 namespace Padam87\BinPacker\Tests;
 
 use Padam87\BinPacker\BinPacker;
+use Padam87\BinPacker\FitHeuristic\BestAreaFit;
 use Padam87\BinPacker\GifMaker;
 use Padam87\BinPacker\Model\Bin;
 use Padam87\BinPacker\Model\Block;
+use Padam87\BinPacker\SplitHeuristic\MaximizeAreaSplit;
 use Padam87\BinPacker\Visualizer;
 use PHPUnit\Framework\TestCase;
 
@@ -13,7 +15,7 @@ class GifMakerTest extends TestCase
 {
     public function testStepByStep()
     {
-        $bin = new Bin(300, 300, true);
+        $bin = new Bin(500, 500);
 
         $blocks = [];
 
@@ -26,16 +28,14 @@ class GifMakerTest extends TestCase
             }
         }
 
-        $packer = new BinPacker();
+        $packer = new BinPacker(new BestAreaFit(), new MaximizeAreaSplit());
         $gifMaker = new GifMaker(new Visualizer());
 
-        $blocks = $packer->pack($bin, $blocks, $gifMaker);
+        $packer->pack($bin, $blocks, $gifMaker);
 
         $gif = $gifMaker->create();
 
-        //$gif->writeImages('bin.gif', true);
-
-        $this->assertCount(count($blocks), $gifMaker->getImages());
+        $this->assertEquals(count($blocks), $gif->getNumberImages());
         $this->assertInstanceOf(\Imagick::class, $gif);
     }
 }
