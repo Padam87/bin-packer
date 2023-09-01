@@ -81,6 +81,11 @@ class Block
         return $this->rotatable;
     }
 
+    public function isRotated()
+    {
+        return $this->rotated;
+    }
+
     public function setRotatable(?bool $rotatable): self
     {
         $this->rotatable = $rotatable;
@@ -111,7 +116,7 @@ class Block
         $this->setWidth($this->getHeight());
         $this->setHeight($w);
 
-        $this->rotated = true;
+        $this->rotated = !$this->rotated;
 
         return $this;
     }
