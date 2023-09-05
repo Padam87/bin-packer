@@ -20,6 +20,11 @@ class Block
     private $rotatable;
 
     /**
+     * @var bool
+     */
+    private $rotated = false;
+
+    /**
      * An ID or name to identify the block for your own purposes.
      *
      * @var mixed|null
@@ -76,6 +81,11 @@ class Block
         return $this->rotatable;
     }
 
+    public function isRotated()
+    {
+        return $this->rotated;
+    }
+
     public function setRotatable(?bool $rotatable): self
     {
         $this->rotatable = $rotatable;
@@ -105,6 +115,8 @@ class Block
 
         $this->setWidth($this->getHeight());
         $this->setHeight($w);
+
+        $this->rotated = !$this->rotated;
 
         return $this;
     }
