@@ -46,6 +46,22 @@ class BinPackerTest extends TestCase
         $this->assertFalse($nonRotatable->getNode() && $nonRotatable->getNode()->isUsed());
     }
 
+    public function testRotationStatus()
+    {
+        $bin = new Bin(2000, 100);
+
+        $rotatable = new Block(100, 1000);
+
+        $blocks = [$rotatable];
+
+        $packer = new BinPacker();
+
+        $blocks = $packer->pack($bin, $blocks);
+
+        $this->assertTrue($rotatable->getNode() && $rotatable->isRotated());
+
+    }
+
     public function testOverflow()
     {
         $bin = new Bin(1000, 1000);
